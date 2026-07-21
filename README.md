@@ -61,6 +61,14 @@ Every entry is labelled with how long ago it was (e.g. _2 years ago_).
 - **Preview** — how much of each note to show: none, a truncated snippet, or the
   full note.
 
+## Privacy
+
+Everything happens locally: the plugin makes no network requests and collects no
+telemetry. It reads only your daily notes, using the paths the core **Daily
+notes** settings already define. It looks at every markdown file in the vault
+only when **Include other notes** is turned on, because that setting is what
+asks it to date notes outside the daily-notes folder.
+
 ## Installation
 
 ### From the community plugins browser

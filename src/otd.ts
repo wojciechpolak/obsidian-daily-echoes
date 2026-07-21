@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Moment } from 'moment';
+import type { Moment } from 'moment';
 import { OtdEntry, OtdMatch, OtdMode } from './types';
 
 /**

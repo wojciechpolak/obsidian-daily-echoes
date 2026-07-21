@@ -17,8 +17,11 @@
  */
 
 import esbuild from 'esbuild';
-import process from 'process';
-import builtins from 'builtin-modules';
+import process from 'node:process';
+import { builtinModules } from 'node:module';
+
+// Node's builtins, both bare and `node:`-prefixed, so neither form is bundled.
+const builtins = [...builtinModules, ...builtinModules.map((m) => `node:${m}`)];
 
 // Carried into the distributed main.js: GPL requires this project's notice to
 // travel with the binary, and the bundled daily-notes interface requires its

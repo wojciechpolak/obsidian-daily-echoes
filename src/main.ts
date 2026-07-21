@@ -79,7 +79,9 @@ export default class DailyEchoesPlugin extends Plugin {
     }
 
     async loadSettings(): Promise<void> {
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        // loadData() is typed `any`; narrow it before merging over the defaults.
+        const saved = ((await this.loadData()) ?? {}) as Partial<OtdSettings>;
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
     }
 
     async saveSettings(): Promise<void> {

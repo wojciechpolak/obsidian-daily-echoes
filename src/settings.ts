@@ -100,6 +100,9 @@ export class OtdSettingTab extends PluginSettingTab {
                     slider
                         .setLimits(80, 1000, 20)
                         .setValue(this.plugin.settings.snippetLength)
+                        // Deprecated since 1.13.0, where the value is always
+                        // shown inline — but minAppVersion is 1.7.2, and
+                        // without this older builds show no value at all.
                         .setDynamicTooltip()
                         .onChange(async (value) => {
                             this.plugin.settings.snippetLength = value;

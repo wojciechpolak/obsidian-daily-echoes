@@ -14,6 +14,15 @@ and this project follows
 - Release assets (`main.js`, `manifest.json`, `styles.css`) now carry GitHub
   artifact attestations, so their provenance can be verified with
   `gh attestation verify`.
+- README now states what the plugin reads and that it makes no network requests.
+
+### Fixed
+
+- Saved settings are narrowed instead of merged from an `any`-typed value.
+- `Moment` is imported as a type-only import in `otd.ts`, matching the other
+  modules.
+- The build no longer depends on the `builtin-modules` package; it uses
+  `node:module`'s `builtinModules` instead.
 
 ## [1.0.0] - 2026-07-21
 
