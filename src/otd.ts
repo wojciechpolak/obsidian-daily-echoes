@@ -95,7 +95,12 @@ export function filterEntries(
 
         matches.push({
             ...entry,
-            yearsAgo: todayStart.diff(date, 'years'),
+            // Calendar-year difference, not elapsed whole years: a note from
+            // 24 July 2025 read on 22 July 2026 is "1 year ago", even though
+            // only 363 days have passed. Elapsed years would call it "earlier
+            // this year", which is wrong for every mode whose window reaches
+            // past today's month/day into the previous year.
+            yearsAgo: todayStart.year() - date.year(),
         });
     }
 

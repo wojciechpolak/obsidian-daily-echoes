@@ -7,6 +7,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html) for public releases.
 
+## [Unreleased]
+
+### Fixed
+
+- Entries from the previous calendar year are no longer labelled "earlier this
+  year" when fewer than 365 days have passed. The "how long ago" label now uses
+  the calendar-year difference, so a note from 24 July 2025 read on 22 July 2026
+  correctly reads "1 year ago". This affected Week and Day-of-month, whose
+  windows reach past today's month and day.
+
 ## [1.0.1] - 2026-07-21
 
 ### Added

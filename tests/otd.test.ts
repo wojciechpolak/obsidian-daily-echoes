@@ -158,7 +158,7 @@ describe('filterEntries', () => {
         ]);
     });
 
-    it('reports whole years elapsed', () => {
+    it('reports the calendar-year difference', () => {
         const result = filterEntries(
             [entry('2025-07-21'), entry('2020-07-21'), entry('2026-07-14')],
             today,
@@ -169,6 +169,14 @@ describe('filterEntries', () => {
         expect(byPath['Log/2025-07-21.md']).toBe(1);
         expect(byPath['Log/2020-07-21.md']).toBe(6);
         expect(byPath['Log/2026-07-14.md']).toBe(0);
+    });
+
+    it('counts last year as a year ago even when under 365 days have passed', () => {
+        // 24 July 2025 is 363 days before 21 July 2026. Counting elapsed whole
+        // years would round that to 0 and label it "earlier this year".
+        const result = filterEntries([entry('2025-07-24')], today, OtdMode.Week, false);
+        expect(result.map((m) => m.yearsAgo)).toEqual([1]);
+        expect(relativeLabel(result[0])).toBe('1 year ago');
     });
 
     it('keeps non-daily notes flagged so the view can badge them', () => {
