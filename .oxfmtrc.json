@@ -1,0 +1,18 @@
+{
+    "$schema": "./node_modules/oxfmt/configuration_schema.json",
+    "ignorePatterns": ["main.js"],
+    "printWidth": 100,
+    "proseWrap": "always",
+    "semi": true,
+    "singleQuote": true,
+    "sortPackageJson": true,
+    "trailingComma": "es5",
+    "overrides": [
+        {
+            "files": ["**/*.md"],
+            "options": {
+                "printWidth": 80
+            }
+        }
+    ]
+}

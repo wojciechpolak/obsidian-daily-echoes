@@ -1,0 +1,179 @@
+/**
+ * Daily Echoes for Obsidian
+ * Copyright (C) 2026 Wojciech Polak
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/* Daily Echoes for Obsidian: sidebar view styling. Uses Obsidian theme variables so it
+   adapts to both light and dark themes automatically. */
+
+.otd {
+    padding: 0;
+}
+
+.otd-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--size-4-2);
+    padding: var(--size-4-2) var(--size-4-3);
+    position: sticky;
+    top: 0;
+    background-color: var(--background-primary);
+    border-bottom: 1px solid var(--background-modifier-border);
+    z-index: 1;
+}
+
+.otd-modes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--size-2-1);
+}
+
+.otd-mode {
+    padding: var(--size-2-1) var(--size-2-3);
+    font-size: var(--font-ui-smaller);
+    border-radius: var(--radius-s);
+    background-color: transparent;
+    color: var(--text-muted);
+    box-shadow: none;
+    cursor: pointer;
+}
+
+.otd-mode:hover {
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+}
+
+.otd-mode.is-active {
+    color: var(--text-on-accent);
+    background-color: var(--interactive-accent);
+}
+
+.otd-refresh {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--size-2-1);
+    background-color: transparent;
+    color: var(--text-muted);
+    box-shadow: none;
+    cursor: pointer;
+}
+
+.otd-refresh:hover {
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+}
+
+.otd-list {
+    padding: var(--size-4-2) var(--size-4-3) var(--size-4-4);
+}
+
+.otd-caption {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: var(--size-4-2);
+}
+
+.otd-empty {
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+    padding: var(--size-4-4) var(--size-2-1);
+    text-align: center;
+}
+
+.otd-card {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+    background-color: var(--background-secondary);
+    padding: var(--size-4-2) var(--size-4-3);
+    margin-bottom: var(--size-4-2);
+}
+
+.otd-card.is-other {
+    border-style: dashed;
+}
+
+.otd-card-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--size-4-2);
+    margin-bottom: var(--size-2-2);
+}
+
+.otd-card-title {
+    font-weight: var(--font-semibold);
+    color: var(--text-normal);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.otd-card-title:hover {
+    color: var(--text-accent);
+    text-decoration: underline;
+}
+
+.otd-card-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--size-2-2);
+    flex-shrink: 0;
+}
+
+.otd-ago {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.otd-badge {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-faint);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s);
+    padding: 0 var(--size-2-1);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.otd-preview {
+    font-size: var(--font-ui-small);
+    color: var(--text-muted);
+    max-height: 20em;
+    overflow: hidden;
+    position: relative;
+}
+
+.otd-preview.is-empty {
+    font-style: italic;
+    color: var(--text-faint);
+}
+
+/* Tighten spacing of rendered markdown inside a preview. */
+.otd-preview > :first-child {
+    margin-top: 0;
+}
+
+.otd-preview > :last-child {
+    margin-bottom: 0;
+}
+
+.otd-preview p {
+    margin: var(--size-2-2) 0;
+}
