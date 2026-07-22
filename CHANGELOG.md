@@ -9,6 +9,10 @@ and this project follows
 
 ## [Unreleased]
 
+### Added
+
+- README now shows a screenshot of the panel, in light and dark variants.
+
 ### Fixed
 
 - Entries from the previous calendar year are no longer labelled "earlier this
