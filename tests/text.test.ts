@@ -66,6 +66,22 @@ describe('truncate', () => {
         expect(truncate('exactly10!', 10)).toBe('exactly10!');
     });
 
+    it('drops a block marker left dangling on the last line', () => {
+        // The bullet's text falls outside the limit; keeping the bare "-"
+        // renders as a stray "-…" in the preview.
+        expect(truncate('Some text about a thing.\n- more words', 27)).toBe(
+            'Some text about a thing.…'
+        );
+        expect(truncate('Some text about a thing.\n## Heading', 28)).toBe(
+            'Some text about a thing.…'
+        );
+        expect(truncate('Some text about a thing.\n1. Item', 28)).toBe('Some text about a thing.…');
+    });
+
+    it('keeps a hyphen that is part of the text', () => {
+        expect(truncate('a well-known thing here', 14)).toBe('a well-known…');
+    });
+
     it('cuts at a word boundary and appends an ellipsis', () => {
         expect(truncate('the quick brown fox jumps', 16)).toBe('the quick brown…');
     });

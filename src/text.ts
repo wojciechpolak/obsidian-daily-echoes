@@ -35,5 +35,8 @@ export function truncate(text: string, limit: number): string {
     const slice = text.slice(0, limit);
     const lastSpace = slice.lastIndexOf(' ');
     const cut = lastSpace > limit * 0.6 ? slice.slice(0, lastSpace) : slice;
-    return cut.trimEnd() + '…';
+    // Cutting mid-document can leave a bare block marker on the last line — a
+    // list bullet or heading whose text fell outside the limit. Rendered, that
+    // shows up as a stray "-…", so drop it.
+    return cut.trimEnd().replace(/(?:^|\n)\s*(?:[-*+>]|#{1,6}|\d+\.)\s*$/, '') + '…';
 }

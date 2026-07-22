@@ -16,6 +16,8 @@ and this project follows
   the calendar-year difference, so a note from 24 July 2025 read on 22 July 2026
   correctly reads "1 year ago". This affected Week and Day-of-month, whose
   windows reach past today's month and day.
+- Snippet previews no longer end in a stray `-…` when the truncation point lands
+  on a list bullet or heading whose text falls outside the limit.
 
 ## [1.0.1] - 2026-07-21
 
