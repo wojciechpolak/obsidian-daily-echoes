@@ -100,4 +100,36 @@ describe('truncate', () => {
     it('does not leave trailing whitespace before the ellipsis', () => {
         expect(truncate('alpha beta   gamma delta', 14)).toBe('alpha beta…');
     });
+
+    it('unwraps a link whose URL is cut in half', () => {
+        // Rendered, "[the show](https://exa…" would show literal brackets.
+        expect(truncate('We saw [the show](https://example.com/a/very/long/url) there', 22)).toBe(
+            'We saw the show…'
+        );
+    });
+
+    it('unwraps a link cut inside its label', () => {
+        expect(truncate('We saw [the show](https://example.com) there', 13)).toBe('We saw the…');
+    });
+
+    it('keeps a link that fits whole', () => {
+        const text = 'We saw [it](https://example.com) and then went home';
+        expect(truncate(text, 34)).toBe('We saw [it](https://example.com)…');
+    });
+
+    it('unwraps a half-written wikilink, preferring its alias', () => {
+        // The cut lands inside the closing "]]", leaving a lone bracket.
+        expect(truncate('See [[Somepage]] and more', 15)).toBe('See Somepage…');
+        expect(truncate('See [[Page|thealias]] here', 19)).toBe('See thealias…');
+    });
+
+    it('drops an image or embed left without its target', () => {
+        expect(truncate('Photo: ![a cat](https://example.com/cat.png) here', 26)).toBe('Photo:…');
+        expect(truncate('Photo: ![[cat.png]] here', 15)).toBe('Photo:…');
+    });
+
+    it('leaves bracket text that is not a link alone', () => {
+        expect(truncate('- [ ] buy milk and bread', 16)).toBe('- [ ] buy milk…');
+        expect(truncate('A claim[^1] with a footnote', 15)).toBe('A claim[^1]…');
+    });
 });

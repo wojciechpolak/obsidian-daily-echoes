@@ -27,6 +27,42 @@ export function stripFrontmatter(content: string): string {
     return match ? content.slice(match[0].length) : content;
 }
 
+/**
+ * Repair a bracket construct left half-written by a cut. A `[label](url` or
+ * `[[wikilink` fragment renders as literal brackets, so unwrap it to its plain
+ * label; an image or embed is meaningless without its target, so drop it.
+ * Complete constructs are returned untouched.
+ */
+function healDanglingLink(text: string): string {
+    const open = text.lastIndexOf('[');
+    if (open < 0) {
+        return text;
+    }
+    const isWiki = open > 0 && text[open - 1] === '[';
+    const openLen = isWiki ? 2 : 1;
+    const start = open - (openLen - 1);
+    const body = text.slice(start);
+    const closer = isWiki ? ']]' : ']';
+    const end = body.indexOf(closer, openLen);
+    if (end >= 0) {
+        const after = body.slice(end + closer.length);
+        // Closed and not mid-URL: a real link, a footnote ref, a task
+        // checkbox — nothing to heal.
+        if (!after.startsWith('(') || after.includes(')')) {
+            return text;
+        }
+    }
+    const isEmbed = start > 0 && text[start - 1] === '!';
+    const head = text.slice(0, isEmbed ? start - 1 : start);
+    if (isEmbed) {
+        return head;
+    }
+    // A cut inside `]]` leaves a lone `]` on the label.
+    const label = (end >= 0 ? body.slice(openLen, end) : body.slice(openLen)).replace(/\]+$/, '');
+    // `[[Page|Alias` shows the alias; a plain `[[Page` shows the page name.
+    return head + (isWiki ? label.slice(label.lastIndexOf('|') + 1) : label);
+}
+
 /** Truncate at a word boundary near `limit`, adding an ellipsis. */
 export function truncate(text: string, limit: number): string {
     if (text.length <= limit) {
@@ -38,5 +74,9 @@ export function truncate(text: string, limit: number): string {
     // Cutting mid-document can leave a bare block marker on the last line — a
     // list bullet or heading whose text fell outside the limit. Rendered, that
     // shows up as a stray "-…", so drop it.
-    return cut.trimEnd().replace(/(?:^|\n)\s*(?:[-*+>]|#{1,6}|\d+\.)\s*$/, '') + '…';
+    return (
+        healDanglingLink(cut.trimEnd())
+            .trimEnd()
+            .replace(/(?:^|\n)\s*(?:[-*+>]|#{1,6}|\d+\.)\s*$/, '') + '…'
+    );
 }

@@ -7,6 +7,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html) for public releases.
 
+## [Unreleased]
+
+### Fixed
+
+- Snippet previews no longer show raw markup when the snippet length cuts
+  through a link. A half-written `[label](url` or `[[wikilink` is now unwrapped
+  to its plain label, and an image or embed left without its target is dropped.
+
 ## [1.0.2] - 2026-07-22
 
 ### Added
