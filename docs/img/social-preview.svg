@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+    <title>Daily Echoes for Obsidian</title>
+    <style>
+        .bg { fill: #f7f6fb; }
+        .glow { stop-color: #7f6df2; }
+        .accent { fill: #7f6df2; }
+        .ring { fill: none; stroke: #7f6df2; stroke-width: 3; }
+        .hole { fill: #f7f6fb; }
+        .title { fill: #26232f; }
+        .sub { fill: #8a869c; }
+        .title, .sub { font-family: 'Iowan Old Style', 'Charter', Georgia, 'Times New Roman', serif; }
+        .sub { font-family: 'Helvetica Neue', 'Segoe UI', Helvetica, Arial, sans-serif; }
+
+        @media (prefers-color-scheme: dark) {
+            .bg, .hole { fill: #1c1b22; }
+            .glow { stop-color: #8b7cf6; }
+            .accent { fill: #8b7cf6; }
+            .ring { stroke: #8b7cf6; }
+            .title { fill: #ece9f5; }
+            .sub { fill: #8e8aa3; }
+        }
+    </style>
+    <defs>
+        <radialGradient id="glow" cx="326" cy="320" r="330" gradientUnits="userSpaceOnUse">
+            <stop offset="0" class="glow" stop-opacity="0.14" />
+            <stop offset="1" class="glow" stop-opacity="0" />
+        </radialGradient>
+    </defs>
+
+    <rect class="bg" width="1280" height="640" />
+    <rect fill="url(#glow)" width="1280" height="640" />
+
+    <!-- Mark: today's page with its echoes from past years -->
+    <g transform="translate(28 0)">
+        <rect class="ring" x="148" y="170" width="300" height="300" rx="66" opacity="0.12" />
+        <rect class="ring" x="178" y="200" width="240" height="240" rx="54" opacity="0.24" />
+        <rect class="ring" x="208" y="230" width="180" height="180" rx="42" opacity="0.45" />
+
+        <rect class="accent" x="238" y="264" width="120" height="112" rx="26" />
+        <rect class="accent" x="264" y="248" width="14" height="30" rx="7" />
+        <rect class="accent" x="318" y="248" width="14" height="30" rx="7" />
+        <rect class="hole" x="238" y="296" width="120" height="4" opacity="0.9" />
+        <circle class="hole" cx="298" cy="336" r="14" />
+    </g>
+
+    <!-- Wordmark -->
+    <text class="title" x="540" y="336" font-size="104" letter-spacing="-1">Daily Echoes</text>
+    <text class="sub" x="544" y="396" font-size="22" letter-spacing="7">FOR OBSIDIAN</text>
+</svg>
