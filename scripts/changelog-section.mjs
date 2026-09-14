@@ -25,6 +25,7 @@
  */
 
 import { readFileSync } from 'node:fs';
+import { findSectionStart, sectionBody } from './changelog.mjs';
 
 const version = process.argv[2];
 if (!version) {
@@ -34,13 +35,7 @@ if (!version) {
 
 const changelog = readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8');
 const lines = changelog.split('\n');
-
-// Match "## [1.0.1] - 2026-07-21" and "## [1.0.1]", but not "## [Unreleased]".
-const isHeading = (line) => /^##\s/.test(line);
-const versionHeading = `## [${version}]`;
-const start = lines.findIndex(
-    (line) => line === versionHeading || line.startsWith(`${versionHeading} - `)
-);
+const start = findSectionStart(lines, version);
 
 if (start === -1) {
     console.error(`error: CHANGELOG.md has no section for version ${version}.`);
@@ -48,15 +43,7 @@ if (start === -1) {
     process.exit(1);
 }
 
-// A section ends at the next "## " heading, or at the trailing block of link
-// reference definitions ("[1.0.0]: https://...") that Keep a Changelog puts at
-// the bottom of the file.
-// The URL may sit on a continuation line (oxfmt wraps long ones), so the label
-// line can end right after the colon.
-const isLinkDefinition = (line) => /^\[[^\]]+\]:(\s|$)/.test(line);
-const rest = lines.slice(start + 1);
-const end = rest.findIndex((line) => isHeading(line) || isLinkDefinition(line));
-const body = (end === -1 ? rest : rest.slice(0, end)).join('\n').trim();
+const body = sectionBody(lines, start);
 
 if (!body) {
     console.error(`error: the CHANGELOG.md section for ${version} is empty.`);

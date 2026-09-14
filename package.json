@@ -25,7 +25,10 @@
     "test:watch": "vitest",
     "check:versions": "node scripts/check-versions.mjs",
     "check": "npm run check:versions && npm run lint && npm run format:check && npm run build && npm run test",
-    "version": "node version-bump.mjs && git add manifest.json versions.json"
+    "version": "node version-bump.mjs && node scripts/release-changelog.mjs && git add manifest.json versions.json CHANGELOG.md",
+    "preversion": "npm run check && node scripts/release-changelog.mjs --check",
+    "postversion": "printf 'Tagged %s.\\nPush it with: git push origin main %s\\n' \"$npm_package_version\" \"$npm_package_version\"",
+    "release": "npm version"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
