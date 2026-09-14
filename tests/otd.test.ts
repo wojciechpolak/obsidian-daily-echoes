@@ -176,7 +176,7 @@ describe('filterEntries', () => {
         // years would round that to 0 and label it "earlier this year".
         const result = filterEntries([entry('2025-07-24')], today, OtdMode.Week, false);
         expect(result.map((m) => m.yearsAgo)).toEqual([1]);
-        expect(relativeLabel(result[0])).toBe('1 year ago');
+        expect(relativeLabel(result[0].date, today)).toBe('1 year ago');
     });
 
     it('keeps non-daily notes flagged so the view can badge them', () => {
@@ -197,13 +197,42 @@ describe('filterEntries', () => {
     });
 });
 
-const label = (yearsAgo: number) => relativeLabel({ yearsAgo } as never);
+const label = (iso: string, now = '2026-07-21') => relativeLabel(d(iso), d(now));
 
 describe('relativeLabel', () => {
-    it('renders singular, plural, and same-year cases', () => {
-        expect(label(0)).toBe('earlier this year');
-        expect(label(1)).toBe('1 year ago');
-        expect(label(2)).toBe('2 years ago');
-        expect(label(17)).toBe('17 years ago');
+    it('counts recent entries in days', () => {
+        expect(label('2026-07-21')).toBe('today');
+        expect(label('2026-07-20')).toBe('yesterday');
+        expect(label('2026-07-19')).toBe('2 days ago');
+        expect(label('2026-07-15')).toBe('6 days ago');
+    });
+
+    it('counts the next four weeks in weeks', () => {
+        expect(label('2026-07-14')).toBe('1 week ago'); // 7 days
+        expect(label('2026-07-08')).toBe('2 weeks ago'); // 13 days
+        expect(label('2026-06-24')).toBe('4 weeks ago'); // 27 days
+    });
+
+    it('switches to months past four weeks', () => {
+        expect(label('2026-06-23')).toBe('1 month ago'); // 28 days
+        expect(label('2026-05-21')).toBe('2 months ago');
+        expect(label('2025-11-21')).toBe('8 months ago');
+    });
+
+    it('rounds a near-anniversary up to a whole year', () => {
+        // 363 days is ~11.9 months. It must not read "11 months ago".
+        expect(label('2025-07-24')).toBe('1 year ago');
+    });
+
+    it('floors longer gaps to whole years', () => {
+        expect(label('2025-07-21')).toBe('1 year ago');
+        expect(label('2025-01-21')).toBe('1 year ago'); // 18 months
+        expect(label('2024-07-21')).toBe('2 years ago');
+        expect(label('2009-07-21')).toBe('17 years ago');
+    });
+
+    it('measures the real gap across New Year', () => {
+        // A calendar-year difference alone would call this "1 year ago".
+        expect(label('2025-12-31', '2026-01-02')).toBe('2 days ago');
     });
 });

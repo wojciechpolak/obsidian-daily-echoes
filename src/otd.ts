@@ -108,13 +108,44 @@ export function filterEntries(
     return matches;
 }
 
-/** Human-friendly "how long ago" label for a matched entry. */
-export function relativeLabel(match: OtdMatch): string {
-    if (match.yearsAgo <= 0) {
-        return 'earlier this year';
+/** Gaps shorter than this count in whole weeks, longer ones in months. */
+const MONTH_THRESHOLD_DAYS = 28;
+
+/** Formats a count and unit as `2 days ago`. The unit takes an s unless count is 1. */
+function ago(count: number, unit: string): string {
+    return `${count} ${unit}${count === 1 ? '' : 's'} ago`;
+}
+
+/**
+ * How long ago `date` was, counted in days, weeks, months or years.
+ *
+ * This rounds the month count rather than flooring it, so a window that
+ * reaches a few days past an anniversary still reads as a whole year. 363 days
+ * is ~11.9 months, which rounds to 12 and gives "1 year ago". Dividing by 12
+ * then floors the year count, so an 18-month gap (reachable in Day-of-month
+ * mode) stays at "1 year ago" instead of rounding up to two.
+ */
+export function relativeLabel(date: Moment, today: Moment): string {
+    const from = date.clone().startOf('day');
+    const to = today.clone().startOf('day');
+    const days = to.diff(from, 'days');
+
+    if (days <= 0) {
+        return 'today';
     }
-    if (match.yearsAgo === 1) {
-        return '1 year ago';
+    if (days === 1) {
+        return 'yesterday';
     }
-    return `${match.yearsAgo} years ago`;
+    if (days < 7) {
+        return ago(days, 'day');
+    }
+    if (days < MONTH_THRESHOLD_DAYS) {
+        return ago(Math.round(days / 7), 'week');
+    }
+
+    const months = Math.max(1, Math.round(to.diff(from, 'months', true)));
+    if (months < 12) {
+        return ago(months, 'month');
+    }
+    return ago(Math.floor(months / 12), 'year');
 }

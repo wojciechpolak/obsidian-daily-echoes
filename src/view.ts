@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import type { Moment } from 'moment';
 import {
     Component,
     ItemView,
@@ -238,7 +239,7 @@ export class OtdView extends ItemView {
             if (index >= matches.length) {
                 return;
             }
-            await this.renderCard(list, matches[index], scope);
+            await this.renderCard(list, matches[index], today, scope);
             return renderNext();
         };
         const workerCount = Math.min(RENDER_BATCH_SIZE, matches.length);
@@ -252,6 +253,7 @@ export class OtdView extends ItemView {
     private async renderCard(
         parent: HTMLElement,
         match: OtdMatch,
+        today: Moment,
         scope: Component | null
     ): Promise<void> {
         const card = parent.createDiv('otd-card');
@@ -271,7 +273,7 @@ export class OtdView extends ItemView {
         });
 
         const meta = head.createDiv('otd-card-meta');
-        meta.createSpan({ text: relativeLabel(match), cls: 'otd-ago' });
+        meta.createSpan({ text: relativeLabel(match.date, today), cls: 'otd-ago' });
         if (!match.isDailyNote) {
             meta.createSpan({ text: 'other', cls: 'otd-badge' });
         }

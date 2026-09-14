@@ -67,7 +67,7 @@ export interface OtdEntry {
 
 /** An entry that matched the active mode, with elapsed-time info. */
 export interface OtdMatch extends OtdEntry {
-    /** Whole years elapsed between the entry's date and today. */
+    /** Calendar-year difference between the entry's date and today. */
     yearsAgo: number;
 }
 

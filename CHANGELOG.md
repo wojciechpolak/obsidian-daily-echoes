@@ -7,6 +7,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html) for public releases.
 
+## [Unreleased]
+
+### Fixed
+
+- Recent entries no longer all read "earlier this year". The "how long ago"
+  label now counts in days, weeks, months or years, so a note from yesterday
+  reads "yesterday" and one from three days ago reads "3 days ago". Week, Month
+  and Day-of-month surface such entries once "Include current year" is on.
+- A short gap across New Year now counts the real gap. A note from 31 December
+  read on 2 January says "2 days ago" instead of "1 year ago". Entries near an
+  anniversary still round up to whole years, so 363 days remains "1 year ago".
+
 ## [1.0.4] - 2026-08-19
 
 ### Changed
