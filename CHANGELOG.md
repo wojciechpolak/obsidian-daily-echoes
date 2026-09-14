@@ -9,6 +9,8 @@ and this project follows
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-09-14
+
 ### Fixed
 
 - Recent entries no longer all read "earlier this year". The "how long ago"
