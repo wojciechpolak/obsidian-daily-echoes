@@ -1,7 +1,7 @@
 {
     "id": "daily-echoes",
     "name": "Daily Echoes",
-    "version": "1.0.5",
+    "version": "1.1.0",
     "minAppVersion": "1.13.0",
     "description": "Revisit your daily notes from previous years: on this day, this week, this month, or this day of the month.",
     "author": "Wojciech Polak",

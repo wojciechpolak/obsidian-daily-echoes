@@ -9,6 +9,8 @@ and this project follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-17
+
 ### Changed
 
 - Requires Obsidian 1.13.0 or later. Older Obsidian versions keep getting Daily
