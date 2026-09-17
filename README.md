@@ -81,6 +81,8 @@ the daily-notes folder.
 
 ## Installation
 
+Daily Echoes needs Obsidian 1.13.0 or later.
+
 ### From the community plugins browser
 
 Once published, look for "Daily Echoes" under Settings → Community plugins →

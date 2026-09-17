@@ -32,6 +32,19 @@ const pkg = read('package.json');
 const manifest = read('manifest.json');
 const versions = read('versions.json');
 
+/** Compare dotted numeric versions: negative, zero or positive like a sort comparator. */
+function compareVersions(a, b) {
+    const pa = a.split('.').map(Number);
+    const pb = b.split('.').map(Number);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+        const diff = (pa[i] ?? 0) - (pb[i] ?? 0);
+        if (diff !== 0) {
+            return diff;
+        }
+    }
+    return 0;
+}
+
 const problems = [];
 /** Set when the fix is "re-run npm version", as opposed to editing by hand. */
 let versionDrift = false;
@@ -54,10 +67,21 @@ if (!versions[manifest.version]) {
 if (!manifest.minAppVersion) {
     problems.push('manifest.json is missing minAppVersion');
 } else if (versions[manifest.version] && versions[manifest.version] !== manifest.minAppVersion) {
-    problems.push(
-        `versions.json["${manifest.version}"] is "${versions[manifest.version]}" ` +
-            `but manifest.json minAppVersion is "${manifest.minAppVersion}"`
-    );
+    const recorded = versions[manifest.version];
+    if (compareVersions(manifest.minAppVersion, recorded) > 0) {
+        // A raised minAppVersion waiting for the next release, which records it
+        // under the new version. Rewriting the released entry instead would cut
+        // users on older Obsidian off from the release they can still install.
+        console.log(
+            `note: minAppVersion "${manifest.minAppVersion}" is newer than ` +
+                `versions.json["${manifest.version}"] ("${recorded}"); the next release records it`
+        );
+    } else {
+        problems.push(
+            `versions.json["${manifest.version}"] is "${recorded}" ` +
+                `but manifest.json minAppVersion is "${manifest.minAppVersion}"`
+        );
+    }
 }
 
 if (manifest.id.includes('obsidian')) {

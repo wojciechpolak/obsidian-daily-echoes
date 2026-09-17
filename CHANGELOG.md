@@ -9,6 +9,12 @@ and this project follows
 
 ## [Unreleased]
 
+### Changed
+
+- Requires Obsidian 1.13.0 or later. Older Obsidian versions keep getting Daily
+  Echoes 1.0.5.
+- The settings now show up in Obsidian's settings search.
+
 ## [1.0.5] - 2026-09-14
 
 ### Fixed

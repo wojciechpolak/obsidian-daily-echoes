@@ -16,15 +16,23 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { App, PluginSettingTab, Setting } from 'obsidian';
+import { App, PluginSettingTab, type SettingDefinitionItem } from 'obsidian';
 import type DailyEchoesPlugin from './main';
-import { MODE_LABELS, MODE_ORDER, OtdMode, PreviewMode } from './types';
+import { MODE_LABELS, MODE_ORDER, type OtdSettings, PreviewMode } from './types';
 
 const PREVIEW_LABELS: Record<PreviewMode, string> = {
     [PreviewMode.None]: 'None (title only)',
     [PreviewMode.Snippet]: 'Truncated snippet',
     [PreviewMode.Full]: 'Full note',
 };
+
+/** Settings whose change alters what an open panel shows. */
+const RERENDER_KEYS: ReadonlySet<string> = new Set<keyof OtdSettings>([
+    'includeOtherNotes',
+    'includeCurrentYear',
+    'previewMode',
+    'snippetLength',
+]);
 
 export class OtdSettingTab extends PluginSettingTab {
     private plugin: DailyEchoesPlugin;
@@ -34,82 +42,52 @@ export class OtdSettingTab extends PluginSettingTab {
         this.plugin = plugin;
     }
 
-    display(): void {
-        const { containerEl } = this;
-        containerEl.empty();
+    getSettingDefinitions(): SettingDefinitionItem<keyof OtdSettings>[] {
+        return [
+            {
+                name: 'Default mode',
+                desc: 'The time window shown when the panel first opens.',
+                control: {
+                    type: 'dropdown',
+                    key: 'defaultMode',
+                    options: Object.fromEntries(
+                        MODE_ORDER.map((mode) => [mode, MODE_LABELS[mode]])
+                    ),
+                },
+            },
+            {
+                name: 'Include other notes',
+                desc: "Also show notes that aren't daily notes, dated by a frontmatter date, filename, or creation time. Off by default so only daily notes appear.",
+                control: { type: 'toggle', key: 'includeOtherNotes' },
+            },
+            {
+                name: 'Include current year',
+                desc: 'Also show earlier entries from the current year, not just previous years. Off by default.',
+                control: { type: 'toggle', key: 'includeCurrentYear' },
+            },
+            {
+                name: 'Preview',
+                desc: 'How much of each note to show in its card.',
+                control: { type: 'dropdown', key: 'previewMode', options: PREVIEW_LABELS },
+            },
+            {
+                name: 'Snippet length',
+                desc: 'Maximum characters shown in a truncated preview.',
+                control: { type: 'slider', key: 'snippetLength', min: 80, max: 1000, step: 20 },
+                visible: () => this.plugin.settings.previewMode === PreviewMode.Snippet,
+            },
+        ];
+    }
 
-        new Setting(containerEl)
-            .setName('Default mode')
-            .setDesc('The time window shown when the panel first opens.')
-            .addDropdown((dd) => {
-                for (const mode of MODE_ORDER) {
-                    dd.addOption(mode, MODE_LABELS[mode]);
-                }
-                dd.setValue(this.plugin.settings.defaultMode).onChange(async (value) => {
-                    this.plugin.settings.defaultMode = value as OtdMode;
-                    await this.plugin.saveSettings();
-                });
-            });
-
-        new Setting(containerEl)
-            .setName('Include other notes')
-            .setDesc(
-                "Also show notes that aren't daily notes, dated by a frontmatter date, filename, or creation time. Off by default so only daily notes appear."
-            )
-            .addToggle((toggle) => {
-                toggle.setValue(this.plugin.settings.includeOtherNotes).onChange(async (value) => {
-                    this.plugin.settings.includeOtherNotes = value;
-                    await this.plugin.saveSettings();
-                    this.plugin.refreshViews();
-                });
-            });
-
-        new Setting(containerEl)
-            .setName('Include current year')
-            .setDesc(
-                'Also show earlier entries from the current year, not just previous years. Off by default.'
-            )
-            .addToggle((toggle) => {
-                toggle.setValue(this.plugin.settings.includeCurrentYear).onChange(async (value) => {
-                    this.plugin.settings.includeCurrentYear = value;
-                    await this.plugin.saveSettings();
-                    this.plugin.refreshViews();
-                });
-            });
-
-        new Setting(containerEl)
-            .setName('Preview')
-            .setDesc('How much of each note to show in its card.')
-            .addDropdown((dd) => {
-                for (const mode of Object.values(PreviewMode)) {
-                    dd.addOption(mode, PREVIEW_LABELS[mode]);
-                }
-                dd.setValue(this.plugin.settings.previewMode).onChange(async (value) => {
-                    this.plugin.settings.previewMode = value as PreviewMode;
-                    await this.plugin.saveSettings();
-                    this.plugin.refreshViews();
-                    this.display(); // toggle the snippet-length control
-                });
-            });
-
-        if (this.plugin.settings.previewMode === PreviewMode.Snippet) {
-            new Setting(containerEl)
-                .setName('Snippet length')
-                .setDesc('Maximum characters shown in a truncated preview.')
-                .addSlider((slider) => {
-                    slider
-                        .setLimits(80, 1000, 20)
-                        .setValue(this.plugin.settings.snippetLength)
-                        // Deprecated since 1.13.0, where the value is always
-                        // shown inline — but minAppVersion is 1.7.2, and
-                        // without this older builds show no value at all.
-                        .setDynamicTooltip()
-                        .onChange(async (value) => {
-                            this.plugin.settings.snippetLength = value;
-                            await this.plugin.saveSettings();
-                            this.plugin.refreshViews();
-                        });
-                });
+    // Controls have no onChange, so saving and the panel refresh happen here.
+    async setControlValue(key: string, value: unknown): Promise<void> {
+        Object.assign(this.plugin.settings, { [key]: value });
+        await this.plugin.saveSettings();
+        if (RERENDER_KEYS.has(key)) {
+            this.plugin.refreshViews();
+        }
+        if (key === 'previewMode') {
+            this.refreshDomState(); // show or hide the snippet-length slider
         }
     }
 }
