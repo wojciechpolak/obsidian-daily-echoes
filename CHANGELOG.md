@@ -9,6 +9,8 @@ and this project follows
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-12
+
 ### Added
 
 - A Year view, next to Day #, that lists every daily note from one year, newest
