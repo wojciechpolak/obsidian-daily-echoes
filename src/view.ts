@@ -184,6 +184,7 @@ export class OtdView extends ItemView {
     }
 
     /** Re-render without changing the active mode (used after settings changes). */
+    // fallow-ignore-next-line unused-class-member -- called from main.ts through an instanceof check
     async rerender(): Promise<void> {
         await this.refresh();
     }

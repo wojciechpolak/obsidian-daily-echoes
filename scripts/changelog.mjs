@@ -25,7 +25,7 @@
  */
 
 /** A section ends at the next "## " heading... */
-export const isHeading = (line) => /^##\s/.test(line);
+const isHeading = (line) => /^##\s/.test(line);
 
 /**
  * ...or at the trailing block of link reference definitions
@@ -33,7 +33,7 @@ export const isHeading = (line) => /^##\s/.test(line);
  * The URL may sit on a continuation line (oxfmt wraps long ones), so the label
  * line can end right after the colon.
  */
-export const isLinkDefinition = (line) => /^\[[^\]]+\]:(\s|$)/.test(line);
+const isLinkDefinition = (line) => /^\[[^\]]+\]:(\s|$)/.test(line);
 
 /**
  * Index of the "## [label]" heading, or -1. Matches "## [1.0.1]" and

@@ -1,0 +1,37 @@
+{
+    "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+    // Obsidian calls these on the settings tab; nothing in the repo does.
+    "usedClassMembers": ["getSettingDefinitions", "setControlValue"],
+    "rules": {
+        // esbuild bundles every import into main.js, and Obsidian provides
+        // `obsidian` at runtime, so nothing is installed from dependencies.
+        "dev-dependencies-in-production": "off"
+    },
+    "overrides": [
+        {
+            // Without coverage data, CRAP is estimated from test references.
+            // Modules that import `obsidian` cannot load under vitest, and the
+            // release scripts have no tests, so every branch there scores as
+            // untested.
+            "files": [
+                "src/collect.ts",
+                "src/main.ts",
+                "src/settings.ts",
+                "src/view.ts",
+                "scripts/**"
+            ],
+            "rules": { "complexity-crap": "off" }
+        }
+    ],
+    "health": {
+        "thresholdOverrides": [
+            {
+                // Reached only through truncate(), so the estimate counts it as
+                // 40% covered; tests/text.test.ts exercises each branch.
+                "files": ["src/text.ts"],
+                "functions": ["healDanglingLink"],
+                "maxCrap": 50
+            }
+        ]
+    }
+}
