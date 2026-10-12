@@ -19,7 +19,7 @@ except it reads your Obsidian daily notes instead of ICS calendars.
   />
   <img
     src="https://raw.githubusercontent.com/wojciechpolak/obsidian-daily-echoes/main/docs/img/screenshot-light.webp"
-    alt="The Daily Echoes panel in Obsidian's sidebar, in Day mode, listing daily notes from 22 July 2025, 2024 and 2023, each labelled 1, 2 and 3 years ago."
+    alt="The Daily Echoes panel in Obsidian's sidebar, in Day mode, listing daily notes from 12 October 2025, 2024 and 2023, each labelled 1, 2 and 3 years ago."
     width="400"
   />
 </picture>
