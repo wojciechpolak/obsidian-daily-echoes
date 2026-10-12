@@ -2,7 +2,8 @@
 
 An [Obsidian](https://obsidian.md) plugin that resurfaces your daily notes from
 previous years in the sidebar, so you can revisit what you were doing _on this
-day_, _this week_, _this month_, or on _this day-of-month_ across the years.
+day_, _this week_, _this month_, or on _this day-of-month_ across the years. A
+Year view lists one year of notes, newest first.
 
 It is the Obsidian counterpart to the standalone
 [On This Day](https://github.com/wojciechpolak/on-this-day) web app. Same idea,
@@ -30,7 +31,8 @@ they give you a single "today" view. This one:
 
 - Shows only your daily notes by default, with an optional switch to include
   other documents.
-- Offers four time windows: Day, Week, Month, and Day-of-Month.
+- Offers four time windows (Day, Week, Month, and Day-of-Month) plus a Year view
+  that lists a whole year of notes.
 - Reads your dates straight from the core Daily notes settings, so there is
   nothing extra to configure and no date convention baked into the code.
 
@@ -52,14 +54,25 @@ valid date. The plugin ignores everything else.
 | Week          | within 3 days either side of today's date (7-day window) |
 | Month         | the same calendar month as today                         |
 | Day-of-Month  | the same day number (e.g. the 20th) of any month         |
+| Year          | any day of the chosen year, grouped by month             |
 
 Every entry is labelled with how long ago it was (e.g. _2 years ago_).
+
+The Year view opens on the current year, or on the most recent year with notes
+if the current year has none. Like every other mode, it leaves out today's own
+note.
+
+Every mode has ‹ and › arrows above the list, repeated below a longer one. They
+step Day and Day-of-Month by a day, Week by seven days, Month by a month, and
+Year to the previous or next year that has notes. Once you have stepped away,
+the label between the arrows takes you back to today.
 
 ## Usage
 
 - Click the calendar-clock ribbon icon, or run the "Daily Echoes: Open view"
   command, to open the panel in the right sidebar.
 - Switch modes from the panel header, or use the per-mode commands.
+- Use the ‹ and › arrows to look at other days, weeks, months or years.
 - Click an entry to open that note. ⌘/Ctrl-click opens it in a new tab.
 
 ## Settings
@@ -68,7 +81,8 @@ Every entry is labelled with how long ago it was (e.g. _2 years ago_).
 - **Include other notes:** also include notes that aren't daily notes, dated by
   a frontmatter date, the filename, or file creation time. Off by default.
 - **Include current year:** also show earlier entries from the current year.
-  Today's own note stays excluded either way. Off by default.
+  Today's own note stays excluded either way. Off by default. The Year view
+  always includes the current year.
 - **Preview:** none, a truncated snippet, or the full note.
 
 ## Privacy

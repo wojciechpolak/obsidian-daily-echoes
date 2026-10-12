@@ -29,8 +29,26 @@ import {
 } from 'obsidian';
 import { collectEntries, hasDailyNotes } from './collect';
 import { stripFrontmatter, truncate } from './text';
-import { filterEntries, relativeLabel } from './otd';
-import { MODE_LABELS, MODE_ORDER, OtdMatch, OtdMode, PreviewMode } from './types';
+import {
+    adjacentYears,
+    entriesInYear,
+    filterEntries,
+    groupByMonth,
+    pickYear,
+    relativeLabel,
+    shiftAnchor,
+    windowLabel,
+    yearsWithEntries,
+} from './otd';
+import {
+    MODE_LABELS,
+    MODE_ORDER,
+    OtdEntry,
+    OtdMatch,
+    OtdMode,
+    PreviewMode,
+    WindowMode,
+} from './types';
 import type DailyEchoesPlugin from './main';
 
 export const VIEW_TYPE_OTD = 'daily-echoes-view';
@@ -41,10 +59,36 @@ const MODE_SHORT: Record<OtdMode, string> = {
     [OtdMode.Week]: 'Week',
     [OtdMode.Month]: 'Month',
     [OtdMode.DayOfMonth]: 'Day #',
+    [OtdMode.Year]: 'Year',
 };
 
-/** Limits simultaneous vault reads and Markdown renders in large result sets. */
-const RENDER_BATCH_SIZE = 8;
+/** How far outside the visible area a preview starts rendering. */
+const PREVIEW_MARGIN = '600px 0px';
+
+/** Schedules a card's preview to render once it scrolls near view. */
+type PreviewQueue = (previewEl: HTMLElement, file: TFile) => void;
+
+/** What one arrow press moves a window mode by, for the arrow tooltips. */
+const STEP_UNITS: Record<WindowMode, string> = {
+    [OtdMode.Day]: 'day',
+    [OtdMode.Week]: 'week',
+    [OtdMode.Month]: 'month',
+    [OtdMode.DayOfMonth]: 'day',
+};
+
+/** Lists at least this long repeat the arrows below the last card. */
+const BOTTOM_NAV_MIN = 4;
+
+/** The arrow bar above a list. A null action disables that control. */
+interface NavSpec {
+    label: string;
+    /** Names the step in the tooltips: "Previous week", "Next week". */
+    unit: string;
+    back: (() => void) | null;
+    forward: (() => void) | null;
+    /** Set once the user has moved away; the label then becomes a button. */
+    reset: { tooltip: string; go: () => void } | null;
+}
 
 export class OtdView extends ItemView {
     private plugin: DailyEchoesPlugin;
@@ -64,6 +108,10 @@ export class OtdView extends ItemView {
     private renderScope: Component | null = null;
     /** Set when a refresh was skipped because the panel was hidden. */
     private staleWhileHidden = false;
+    /** Year picked with the Year view's arrows; null shows the newest year. */
+    private year: number | null = null;
+    /** Arrow presses away from today in each window mode; missing means 0. */
+    private steps = new Map<WindowMode, number>();
 
     constructor(leaf: WorkspaceLeaf, plugin: DailyEchoesPlugin) {
         super(leaf);
@@ -206,56 +254,187 @@ export class OtdView extends ItemView {
         }
 
         const entries = collectEntries(this.app, this.plugin.settings);
+        const queuePreview = this.previewQueue(this.renderScope);
+        if (this.mode === OtdMode.Year) {
+            this.renderYear(list, entries, today, queuePreview);
+            return;
+        }
+
+        this.renderWindow(list, entries, today, this.mode, queuePreview);
+    }
+
+    /** Entries in the Day, Week, Month or Day-of-month window around the anchor. */
+    private renderWindow(
+        list: HTMLElement,
+        entries: OtdEntry[],
+        today: Moment,
+        mode: WindowMode,
+        queuePreview: PreviewQueue
+    ): void {
+        const steps = this.steps.get(mode) ?? 0;
+        const anchor = shiftAnchor(today, mode, steps);
         const matches = filterEntries(
             entries,
             today,
-            this.mode,
-            this.plugin.settings.includeCurrentYear
+            mode,
+            this.plugin.settings.includeCurrentYear,
+            anchor
         );
 
-        const caption = list.createDiv('otd-caption');
-        caption.setText(
-            `${MODE_LABELS[this.mode]} · ${matches.length} ${
-                matches.length === 1 ? 'entry' : 'entries'
-            }`
-        );
+        const nav: NavSpec = {
+            label: `${windowLabel(anchor, mode)} · ${entryCount(matches.length)}`,
+            unit: STEP_UNITS[mode],
+            back: () => this.steps.set(mode, steps - 1),
+            forward: () => this.steps.set(mode, steps + 1),
+            reset:
+                steps === 0
+                    ? null
+                    : { tooltip: 'Back to today', go: () => this.steps.delete(mode) },
+        };
+        this.renderNav(list, nav);
 
         if (matches.length === 0) {
             this.renderEmpty(list, 'No earlier entries fall in this window.');
             return;
         }
 
-        const scope = this.renderScope;
-        for (const match of matches) {
-            this.renderedPaths.add(match.file.path);
+        this.renderCards(list, matches, today, queuePreview);
+        if (matches.length >= BOTTOM_NAV_MIN) {
+            this.renderNav(list, nav);
+        }
+    }
+
+    /** One year of entries, newest first, under month headings. */
+    private renderYear(
+        list: HTMLElement,
+        entries: OtdEntry[],
+        today: Moment,
+        queuePreview: PreviewQueue
+    ): void {
+        const years = yearsWithEntries(entries, today);
+        const year = pickYear(years, this.year);
+        if (year === null) {
+            this.renderEmpty(list, 'No earlier entries yet.');
+            return;
         }
 
-        // Each renderCard builds its card synchronously before awaiting, so cards
-        // stay ordered. A small worker pool caps I/O and Markdown rendering
-        // pressure in large Month/Day-of-Month result sets.
-        let nextIndex = 0;
-        const renderNext = async (): Promise<void> => {
-            const index = nextIndex++;
-            if (index >= matches.length) {
-                return;
-            }
-            await this.renderCard(list, matches[index], today, scope);
-            return renderNext();
+        const matches = entriesInYear(entries, today, year);
+        const { older, newer } = adjacentYears(years, year);
+        const nav: NavSpec = {
+            label: `${year} · ${entryCount(matches.length)}`,
+            unit: 'year',
+            back: older === null ? null : () => (this.year = older),
+            forward: newer === null ? null : () => (this.year = newer),
+            reset:
+                year === years[0]
+                    ? null
+                    : { tooltip: 'Back to the latest year', go: () => (this.year = null) },
         };
-        const workerCount = Math.min(RENDER_BATCH_SIZE, matches.length);
-        await Promise.all(Array.from({ length: workerCount }, renderNext));
+
+        this.renderNav(list, nav);
+        for (const group of groupByMonth(matches)) {
+            list.createDiv({
+                text: `${group.matches[0].date.format('MMMM')} · ${group.matches.length}`,
+                cls: 'otd-month',
+            });
+            this.renderCards(list, group.matches, today, queuePreview);
+        }
+        if (matches.length >= BOTTOM_NAV_MIN) {
+            this.renderNav(list, nav);
+        }
+    }
+
+    private renderNav(parent: HTMLElement, nav: NavSpec): void {
+        const bar = parent.createDiv('otd-nav');
+        this.navButton(bar, 'chevron-left', `Previous ${nav.unit}`, nav.back);
+        if (nav.reset) {
+            const { tooltip, go } = nav.reset;
+            const btn = bar.createEl('button', { text: nav.label, cls: 'otd-nav-label is-reset' });
+            setTooltip(btn, tooltip);
+            btn.addEventListener('click', () => this.navigate(go));
+        } else {
+            bar.createSpan({ text: nav.label, cls: 'otd-nav-label' });
+        }
+        this.navButton(bar, 'chevron-right', `Next ${nav.unit}`, nav.forward);
+    }
+
+    private navButton(
+        parent: HTMLElement,
+        icon: string,
+        tooltip: string,
+        action: (() => void) | null
+    ): void {
+        const btn = parent.createEl('button', { cls: 'otd-nav-step' });
+        setIcon(btn, icon);
+        setTooltip(btn, tooltip);
+        if (action === null) {
+            btn.disabled = true;
+            return;
+        }
+        btn.addEventListener('click', () => this.navigate(action));
+    }
+
+    /** Apply a navigation change and redraw the list from the top. */
+    private navigate(change: () => void): void {
+        change();
+        this.contentEl.scrollTop = 0;
+        void this.refresh();
+    }
+
+    /**
+     * Returns a function that defers a card's preview until the card nears the
+     * visible area. A Year or Month list can run to hundreds of notes, and
+     * reading and rendering them all up front made the panel slow to open.
+     */
+    private previewQueue(scope: Component): PreviewQueue {
+        const pending = new Map<Element, TFile>();
+        const observer = new IntersectionObserver(
+            (seen) => {
+                for (const { target, isIntersecting } of seen) {
+                    const file = pending.get(target);
+                    if (!isIntersecting || !file) {
+                        continue;
+                    }
+                    observer.unobserve(target);
+                    pending.delete(target);
+                    const previewEl = target as HTMLElement;
+                    previewEl.removeClass('is-pending');
+                    void this.renderPreview(previewEl, file, scope);
+                }
+            },
+            { root: this.contentEl, rootMargin: PREVIEW_MARGIN }
+        );
+        // Unloaded with this render's scope, so a replaced list stops rendering.
+        scope.register(() => observer.disconnect());
+
+        return (previewEl, file) => {
+            pending.set(previewEl, file);
+            observer.observe(previewEl);
+        };
+    }
+
+    /** Cards are built synchronously, so they keep their order. */
+    private renderCards(
+        parent: HTMLElement,
+        matches: OtdMatch[],
+        today: Moment,
+        queuePreview: PreviewQueue
+    ): void {
+        const showPreview = this.plugin.settings.previewMode !== PreviewMode.None;
+        for (const match of matches) {
+            this.renderedPaths.add(match.file.path);
+            const card = this.renderCard(parent, match, today);
+            if (showPreview) {
+                queuePreview(card.createDiv('otd-preview is-pending'), match.file);
+            }
+        }
     }
 
     private renderEmpty(parent: HTMLElement, message: string): void {
         parent.createDiv('otd-empty').setText(message);
     }
 
-    private async renderCard(
-        parent: HTMLElement,
-        match: OtdMatch,
-        today: Moment,
-        scope: Component | null
-    ): Promise<void> {
+    private renderCard(parent: HTMLElement, match: OtdMatch, today: Moment): HTMLElement {
         const card = parent.createDiv('otd-card');
         if (!match.isDailyNote) {
             card.addClass('is-other');
@@ -277,18 +456,14 @@ export class OtdView extends ItemView {
         if (!match.isDailyNote) {
             meta.createSpan({ text: 'other', cls: 'otd-badge' });
         }
-
-        if (this.plugin.settings.previewMode !== PreviewMode.None) {
-            await this.renderPreview(card, match.file, scope);
-        }
+        return card;
     }
 
     private async renderPreview(
-        card: HTMLElement,
+        previewEl: HTMLElement,
         file: TFile,
-        scope: Component | null
+        scope: Component
     ): Promise<void> {
-        const previewEl = card.createDiv('otd-preview');
         try {
             const raw = await this.app.vault.cachedRead(file);
             let body = stripFrontmatter(raw).trim();
@@ -300,7 +475,7 @@ export class OtdView extends ItemView {
                 previewEl.setText('(empty note)');
                 return;
             }
-            await MarkdownRenderer.render(this.app, body, previewEl, file.path, scope ?? this);
+            await MarkdownRenderer.render(this.app, body, previewEl, file.path, scope);
         } catch {
             previewEl.addClass('is-empty');
             previewEl.setText('(could not read note)');
@@ -311,4 +486,9 @@ export class OtdView extends ItemView {
         const newTab = evt.ctrlKey || evt.metaKey;
         void this.app.workspace.getLeaf(newTab ? 'tab' : false).openFile(file);
     }
+}
+
+/** `1 entry`, `3 entries`. */
+function entryCount(count: number): string {
+    return `${count} ${count === 1 ? 'entry' : 'entries'}`;
 }

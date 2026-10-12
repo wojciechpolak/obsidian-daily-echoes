@@ -18,7 +18,19 @@
 
 import moment from 'moment';
 import { describe, expect, it } from 'vitest';
-import { WEEK_RADIUS_DAYS, filterEntries, matchesMode, relativeLabel } from '../src/otd';
+import {
+    WEEK_RADIUS_DAYS,
+    adjacentYears,
+    entriesInYear,
+    filterEntries,
+    groupByMonth,
+    matchesMode,
+    pickYear,
+    relativeLabel,
+    shiftAnchor,
+    windowLabel,
+    yearsWithEntries,
+} from '../src/otd';
 import { DEFAULT_SETTINGS, OtdEntry, OtdMode } from '../src/types';
 
 const d = (iso: string) => moment(iso, 'YYYY-MM-DD', true).startOf('day');
@@ -189,11 +201,183 @@ describe('filterEntries', () => {
         expect(result.map((m) => m.isDailyNote)).toEqual([false, true]);
     });
 
+    it('measures the window around the anchor, not today', () => {
+        const entries = [entry('2025-07-21'), entry('2025-07-25'), entry('2024-07-25')];
+        const anchor = d('2026-07-25');
+        expect(paths(filterEntries(entries, today, OtdMode.Day, false, anchor))).toEqual([
+            'Log/2025-07-25.md',
+            'Log/2024-07-25.md',
+        ]);
+    });
+
+    it('keeps the cut-off at the real today when the anchor moves ahead', () => {
+        // Stepping forward in Day mode must not surface today's note or
+        // anything future-dated, even with the current year included.
+        const entries = [entry('2026-07-22'), entry('2025-07-22')];
+        const anchor = d('2026-07-22');
+        expect(paths(filterEntries(entries, today, OtdMode.Day, true, anchor))).toEqual([
+            'Log/2025-07-22.md',
+        ]);
+    });
+
     it('does not mutate the input entries', () => {
         const original = entry('2025-07-21');
         const before = original.date.format();
         filterEntries([original], today, OtdMode.Day, true);
         expect(original.date.format()).toBe(before);
+    });
+});
+
+const isoOf = (m: moment.Moment) => m.format('YYYY-MM-DD');
+
+describe('shiftAnchor', () => {
+    const today = d('2026-07-21');
+
+    it('steps one day in Day and Day-of-month mode', () => {
+        expect(isoOf(shiftAnchor(today, OtdMode.Day, -1))).toBe('2026-07-20');
+        expect(isoOf(shiftAnchor(today, OtdMode.DayOfMonth, 11))).toBe('2026-08-01');
+    });
+
+    it('steps seven days in Week mode', () => {
+        expect(isoOf(shiftAnchor(today, OtdMode.Week, 2))).toBe('2026-08-04');
+        expect(isoOf(shiftAnchor(today, OtdMode.Week, -1))).toBe('2026-07-14');
+    });
+
+    it('steps whole months without drifting off the 31st', () => {
+        const endOfJan = d('2026-01-31');
+        expect(isoOf(shiftAnchor(endOfJan, OtdMode.Month, 1))).toBe('2026-02-28');
+        expect(isoOf(shiftAnchor(endOfJan, OtdMode.Month, 2))).toBe('2026-03-31');
+        expect(isoOf(shiftAnchor(endOfJan, OtdMode.Month, -2))).toBe('2025-11-30');
+    });
+
+    it('returns today at zero steps and leaves the input alone', () => {
+        expect(isoOf(shiftAnchor(today, OtdMode.Day, 0))).toBe('2026-07-21');
+        expect(isoOf(today)).toBe('2026-07-21');
+    });
+});
+
+describe('windowLabel', () => {
+    it('names the day or the month', () => {
+        expect(windowLabel(d('2026-07-21'), OtdMode.Day)).toBe('21 July');
+        expect(windowLabel(d('2026-07-21'), OtdMode.Month)).toBe('July');
+        expect(windowLabel(d('2026-07-21'), OtdMode.DayOfMonth)).toBe('Day 21 of the month');
+    });
+
+    it('gives the Week range, naming both months when it spans two', () => {
+        expect(windowLabel(d('2026-07-21'), OtdMode.Week)).toBe('18–24 July');
+        expect(windowLabel(d('2026-07-30'), OtdMode.Week)).toBe('27 July – 2 August');
+    });
+});
+
+describe('yearsWithEntries', () => {
+    const today = d('2026-07-21');
+
+    it('lists each year once, newest first', () => {
+        const entries = [
+            entry('2023-03-01'),
+            entry('2026-01-05'),
+            entry('2023-11-30'),
+            entry('2019-07-21'),
+        ];
+        expect(yearsWithEntries(entries, today)).toEqual([2026, 2023, 2019]);
+    });
+
+    it("ignores today's note and future-dated notes", () => {
+        const entries = [entry('2026-07-21'), entry('2027-01-01'), entry('2025-02-02')];
+        expect(yearsWithEntries(entries, today)).toEqual([2025]);
+    });
+
+    it('returns nothing for an empty vault', () => {
+        expect(yearsWithEntries([], today)).toEqual([]);
+    });
+});
+
+describe('pickYear', () => {
+    it('keeps a requested year that still has entries', () => {
+        expect(pickYear([2026, 2024, 2021], 2024)).toBe(2024);
+    });
+
+    it('falls back to the newest year', () => {
+        expect(pickYear([2026, 2024], null)).toBe(2026);
+        expect(pickYear([2025, 2024], 2020)).toBe(2025);
+    });
+
+    it('returns null when there are no years', () => {
+        expect(pickYear([], null)).toBeNull();
+        expect(pickYear([], 2025)).toBeNull();
+    });
+});
+
+describe('adjacentYears', () => {
+    const years = [2026, 2023, 2021];
+
+    it('skips years without entries', () => {
+        expect(adjacentYears(years, 2023)).toEqual({ older: 2021, newer: 2026 });
+    });
+
+    it('has no newer year at the start and no older year at the end', () => {
+        expect(adjacentYears(years, 2026)).toEqual({ older: 2023, newer: null });
+        expect(adjacentYears(years, 2021)).toEqual({ older: null, newer: 2023 });
+    });
+
+    it('has no neighbours for a year missing from the list', () => {
+        expect(adjacentYears(years, 2024)).toEqual({ older: null, newer: null });
+    });
+});
+
+describe('entriesInYear', () => {
+    const today = d('2026-07-21');
+    const entries = [
+        entry('2026-07-21'),
+        entry('2026-07-20'),
+        entry('2026-01-03'),
+        entry('2026-03-15'),
+        entry('2026-08-01'),
+        entry('2025-12-31'),
+    ];
+
+    it('lists the current year up to yesterday, newest first', () => {
+        expect(paths(entriesInYear(entries, today, 2026))).toEqual([
+            'Log/2026-07-20.md',
+            'Log/2026-03-15.md',
+            'Log/2026-01-03.md',
+        ]);
+    });
+
+    it('lists only the requested year', () => {
+        expect(paths(entriesInYear(entries, today, 2025))).toEqual(['Log/2025-12-31.md']);
+        expect(entriesInYear(entries, today, 2024)).toEqual([]);
+    });
+});
+
+describe('groupByMonth', () => {
+    it('groups consecutive months and keeps their order', () => {
+        const matches = entriesInYear(
+            [
+                entry('2025-01-02'),
+                entry('2025-03-10'),
+                entry('2025-03-01'),
+                entry('2025-12-24'),
+                entry('2025-03-31'),
+            ],
+            d('2026-07-21'),
+            2025
+        );
+        const groups = groupByMonth(matches);
+        expect(groups.map((g) => [g.month, g.matches.length])).toEqual([
+            [11, 1],
+            [2, 3],
+            [0, 1],
+        ]);
+        expect(paths(groups[1].matches)).toEqual([
+            'Log/2025-03-31.md',
+            'Log/2025-03-10.md',
+            'Log/2025-03-01.md',
+        ]);
+    });
+
+    it('returns nothing for no matches', () => {
+        expect(groupByMonth([])).toEqual([]);
     });
 });
 

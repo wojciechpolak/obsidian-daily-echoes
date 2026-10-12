@@ -17,7 +17,7 @@
  */
 
 import type { Moment } from 'moment';
-import { OtdEntry, OtdMatch, OtdMode } from './types';
+import { OtdEntry, OtdMatch, OtdMode, WindowMode } from './types';
 
 /**
  * How many days either side of today's calendar date the Week window covers.
@@ -48,7 +48,7 @@ function withinDaysOfYear(date: Moment, today: Moment, radius: number): boolean 
  * Does an entry's date fall inside the window described by `mode`, relative to
  * `today`? Both moments are expected to be at day precision.
  */
-export function matchesMode(date: Moment, today: Moment, mode: OtdMode): boolean {
+export function matchesMode(date: Moment, today: Moment, mode: WindowMode): boolean {
     switch (mode) {
         case OtdMode.Day:
             return date.month() === today.month() && date.date() === today.date();
@@ -62,50 +62,198 @@ export function matchesMode(date: Moment, today: Moment, mode: OtdMode): boolean
 }
 
 /**
+ * The entry as a match, or null when it falls on today or later. Every view
+ * leaves out today's own note and future-dated notes.
+ */
+function toPastMatch(entry: OtdEntry, todayStart: Moment): OtdMatch | null {
+    const date = entry.date.clone().startOf('day');
+    if (!date.isBefore(todayStart)) {
+        return null;
+    }
+    return {
+        ...entry,
+        // Calendar-year difference, not elapsed whole years: a note from
+        // 24 July 2025 read on 22 July 2026 is "1 year ago", even though
+        // only 363 days have passed. Elapsed years would call it "earlier
+        // this year", which is wrong for every mode whose window reaches
+        // past today's month/day into the previous year.
+        yearsAgo: todayStart.year() - date.year(),
+    };
+}
+
+/** Sorts in place, most recent first, and returns the same array. */
+function newestFirst(matches: OtdMatch[]): OtdMatch[] {
+    matches.sort((a, b) => b.date.valueOf() - a.date.valueOf());
+    return matches;
+}
+
+/**
  * Filter and rank entries for the given mode.
  *
  * Only entries strictly before today are surfaced (never today's own note or
  * future-dated notes). By default the current year is excluded so results are
  * "previous years" only; `includeCurrentYear` relaxes that.
  *
+ * The window is measured around `anchor`, which is today unless the user has
+ * stepped to another date. The cut-off and the current year stay tied to the
+ * real today either way.
+ *
  * Results are sorted most-recent first.
  */
 export function filterEntries(
     entries: OtdEntry[],
     today: Moment,
-    mode: OtdMode,
-    includeCurrentYear: boolean
+    mode: WindowMode,
+    includeCurrentYear: boolean,
+    anchor: Moment = today
 ): OtdMatch[] {
     const todayStart = today.clone().startOf('day');
+    const anchorStart = anchor.clone().startOf('day');
 
     const matches: OtdMatch[] = [];
     for (const entry of entries) {
-        const date = entry.date.clone().startOf('day');
-
-        // Never show today's entry or anything in the future.
-        if (!date.isBefore(todayStart)) {
+        const match = toPastMatch(entry, todayStart);
+        if (!match) {
             continue;
         }
-        if (!includeCurrentYear && date.year() === todayStart.year()) {
+        if (!includeCurrentYear && match.date.year() === todayStart.year()) {
             continue;
         }
-        if (!matchesMode(date, todayStart, mode)) {
+        if (!matchesMode(match.date.clone().startOf('day'), anchorStart, mode)) {
             continue;
         }
-
-        matches.push({
-            ...entry,
-            // Calendar-year difference, not elapsed whole years: a note from
-            // 24 July 2025 read on 22 July 2026 is "1 year ago", even though
-            // only 363 days have passed. Elapsed years would call it "earlier
-            // this year", which is wrong for every mode whose window reaches
-            // past today's month/day into the previous year.
-            yearsAgo: todayStart.year() - date.year(),
-        });
+        matches.push(match);
     }
 
-    matches.sort((a, b) => b.date.valueOf() - a.date.valueOf());
-    return matches;
+    return newestFirst(matches);
+}
+
+/**
+ * The date a window mode is measured around after `steps` presses of the
+ * arrows: one day for Day and Day-of-month, seven days for Week, one month for
+ * Month. Negative steps go back.
+ *
+ * Counting from today each time, instead of shifting the previous anchor,
+ * keeps Month on the right day: 31 January plus two steps is 31 March, not
+ * 28 March by way of 28 February.
+ */
+export function shiftAnchor(today: Moment, mode: WindowMode, steps: number): Moment {
+    const anchor = today.clone().startOf('day');
+    switch (mode) {
+        case OtdMode.Day:
+        case OtdMode.DayOfMonth:
+            return anchor.add(steps, 'days');
+        case OtdMode.Week:
+            return anchor.add(steps * 7, 'days');
+        case OtdMode.Month:
+            return anchor.add(steps, 'months');
+    }
+}
+
+/** Describes the window around `anchor`, e.g. `19–25 July` for Week. */
+export function windowLabel(anchor: Moment, mode: WindowMode): string {
+    switch (mode) {
+        case OtdMode.Day:
+            return anchor.format('D MMMM');
+        case OtdMode.Week: {
+            const start = anchor.clone().subtract(WEEK_RADIUS_DAYS, 'days');
+            const end = anchor.clone().add(WEEK_RADIUS_DAYS, 'days');
+            return start.month() === end.month()
+                ? `${start.date()}–${end.format('D MMMM')}`
+                : `${start.format('D MMMM')} – ${end.format('D MMMM')}`;
+        }
+        case OtdMode.Month:
+            return anchor.format('MMMM');
+        case OtdMode.DayOfMonth:
+            return `Day ${anchor.date()} of the month`;
+    }
+}
+
+/** The distinct years that hold at least one entry before today, newest first. */
+export function yearsWithEntries(entries: OtdEntry[], today: Moment): number[] {
+    const todayStart = today.clone().startOf('day');
+    const years = new Set<number>();
+    for (const entry of entries) {
+        if (entry.date.clone().startOf('day').isBefore(todayStart)) {
+            years.add(entry.date.year());
+        }
+    }
+    const sorted = [...years];
+    sorted.sort((a, b) => b - a);
+    return sorted;
+}
+
+/**
+ * The year the Year view should show: `requested` while it still has entries,
+ * otherwise the newest year that does (the current year whenever it has any).
+ * Null when there are no entries at all.
+ */
+export function pickYear(years: number[], requested: number | null): number | null {
+    if (requested !== null && years.includes(requested)) {
+        return requested;
+    }
+    return years[0] ?? null;
+}
+
+/**
+ * The years either side of `year` in `years` (newest first), so stepping
+ * through them skips years without entries. Null at either end.
+ */
+export function adjacentYears(
+    years: number[],
+    year: number
+): { older: number | null; newer: number | null } {
+    const index = years.indexOf(year);
+    if (index === -1) {
+        return { older: null, newer: null };
+    }
+    return {
+        older: years[index + 1] ?? null,
+        newer: index > 0 ? years[index - 1] : null,
+    };
+}
+
+/**
+ * Every entry from `year` that falls before today, newest first. The Year view
+ * always includes the current year, so `includeCurrentYear` plays no part.
+ */
+export function entriesInYear(entries: OtdEntry[], today: Moment, year: number): OtdMatch[] {
+    const todayStart = today.clone().startOf('day');
+    const matches: OtdMatch[] = [];
+    for (const entry of entries) {
+        if (entry.date.year() !== year) {
+            continue;
+        }
+        const match = toPastMatch(entry, todayStart);
+        if (match) {
+            matches.push(match);
+        }
+    }
+    return newestFirst(matches);
+}
+
+/** A run of matches that share a calendar month. `month` is 0-based, as in moment. */
+export interface MonthGroup {
+    month: number;
+    matches: OtdMatch[];
+}
+
+/**
+ * Split matches into month groups. The input should come from a single year
+ * and already be sorted, so each month forms one consecutive run.
+ */
+export function groupByMonth(matches: OtdMatch[]): MonthGroup[] {
+    const groups: MonthGroup[] = [];
+    for (const match of matches) {
+        const month = match.date.month();
+        const last = groups[groups.length - 1];
+        if (last && last.month === month) {
+            last.matches.push(match);
+        } else {
+            groups.push({ month, matches: [match] });
+        }
+    }
+    return groups;
 }
 
 /** Gaps shorter than this count in whole weeks, longer ones in months. */

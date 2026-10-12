@@ -19,13 +19,17 @@
 import type { Moment } from 'moment';
 import type { TFile } from 'obsidian';
 
-/** The four time windows the plugin can show. */
+/** The views the plugin can show: four anniversary windows plus a by-year list. */
 export enum OtdMode {
     Day = 'day',
     Week = 'week',
     Month = 'month',
     DayOfMonth = 'dayOfMonth',
+    Year = 'year',
 }
+
+/** The anniversary windows, matched against today's date by `matchesMode`. */
+export type WindowMode = Exclude<OtdMode, OtdMode.Year>;
 
 /** Sentence case, per Obsidian's UI style guide. */
 export const MODE_LABELS: Record<OtdMode, string> = {
@@ -33,6 +37,7 @@ export const MODE_LABELS: Record<OtdMode, string> = {
     [OtdMode.Week]: 'This week',
     [OtdMode.Month]: 'This month',
     [OtdMode.DayOfMonth]: 'This day of month',
+    [OtdMode.Year]: 'By year',
 };
 
 /**
@@ -45,10 +50,17 @@ export const MODE_COMMAND_NOUNS: Record<OtdMode, string> = {
     [OtdMode.Week]: 'week',
     [OtdMode.Month]: 'month',
     [OtdMode.DayOfMonth]: 'day of month',
+    [OtdMode.Year]: 'year',
 };
 
 /** Order used for switchers and per-mode commands. */
-export const MODE_ORDER: OtdMode[] = [OtdMode.Day, OtdMode.Week, OtdMode.Month, OtdMode.DayOfMonth];
+export const MODE_ORDER: OtdMode[] = [
+    OtdMode.Day,
+    OtdMode.Week,
+    OtdMode.Month,
+    OtdMode.DayOfMonth,
+    OtdMode.Year,
+];
 
 /** How much of a note's body to preview in a card. */
 export enum PreviewMode {

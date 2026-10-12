@@ -9,6 +9,21 @@ and this project follows
 
 ## [Unreleased]
 
+### Added
+
+- A Year view, next to Day #, that lists every daily note from one year, newest
+  first and grouped by month. It opens on the current year. The command is
+  "Daily Echoes: Show year".
+- Arrows in every mode to step to other dates: a day at a time in Day and Day #,
+  a week in Week, a month in Month, and to the previous or next year with notes
+  in Year. Clicking the label between them returns to today.
+
+### Changed
+
+- Note previews load as they scroll into view, so long lists open faster.
+- The line above the list now names the window it shows, such as `18–24 July`,
+  instead of the mode.
+
 ## [1.1.0] - 2026-09-17
 
 ### Changed

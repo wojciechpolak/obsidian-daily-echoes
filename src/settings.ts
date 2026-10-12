@@ -62,7 +62,7 @@ export class OtdSettingTab extends PluginSettingTab {
             },
             {
                 name: 'Include current year',
-                desc: 'Also show earlier entries from the current year, not just previous years. Off by default.',
+                desc: 'Also show earlier entries from the current year, not just previous years. Off by default. The year view always lists the current year.',
                 control: { type: 'toggle', key: 'includeCurrentYear' },
             },
             {

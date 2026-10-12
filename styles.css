@@ -82,12 +82,69 @@
     padding: var(--size-4-2) var(--size-4-3) var(--size-4-4);
 }
 
-.otd-caption {
+.otd-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--size-4-2);
+    margin-bottom: var(--size-4-2);
+}
+
+.otd-nav:last-child {
+    margin-top: var(--size-4-3);
+    margin-bottom: 0;
+}
+
+.otd-nav-label {
+    font-size: var(--font-ui-small);
+    color: var(--text-muted);
+    text-align: center;
+}
+
+/* Shown once the user has stepped away; clicking it jumps back. */
+.otd-nav-label.is-reset {
+    padding: var(--size-2-1) var(--size-2-2);
+    background-color: transparent;
+    box-shadow: none;
+    color: var(--text-accent);
+    cursor: pointer;
+}
+
+.otd-nav-label.is-reset:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.otd-nav-step {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--size-2-1);
+    background-color: transparent;
+    color: var(--text-muted);
+    box-shadow: none;
+    cursor: pointer;
+}
+
+.otd-nav-step:hover:not([disabled]) {
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+}
+
+.otd-nav-step[disabled] {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.otd-month {
     font-size: var(--font-ui-smaller);
     color: var(--text-faint);
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    margin-bottom: var(--size-4-2);
+    margin: var(--size-4-4) 0 var(--size-4-2);
+}
+
+.otd-nav + .otd-month {
+    margin-top: 0;
 }
 
 .otd-empty {
@@ -158,6 +215,11 @@
     max-height: 20em;
     overflow: hidden;
     position: relative;
+}
+
+/* Placeholder height, so cards waiting for a preview don't all count as in view. */
+.otd-preview.is-pending {
+    min-height: 3em;
 }
 
 .otd-preview.is-empty {
